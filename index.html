@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tienda UGM</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <header>
+        <div class="container top-nav">
+            <div class="logo"><i class="fas fa-graduation-cap"></i> Tienda UGM</div>
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Buscar productos...">
+                <button onclick="buscarProductosGlobal()"><i class="fas fa-search"></i></button>
+            </div>
+            <div class="actions">
+                <div class="action-item" onclick="abrirLoginAdmin()"><i class="fas fa-user-shield"></i> Admin</div>
+                <div class="action-item" onclick="verCarrito()"><i class="fas fa-shopping-cart"></i> <span id="cart-count">Carrito (0)</span></div>
+            </div>
+        </div>
+    </header>
+
+    <nav class="nav-links">
+        <ul class="container">
+            <li onclick="cargarProductos('Ofertas')">Ofertas</li>
+            <li onclick="cargarProductos('Computación')">Computación</li>
+            <li onclick="cargarProductos('Electrónica')">Electrónica</li>
+            <li onclick="cargarProductos('')">Ver Todo</li>
+        </ul>
+    </nav>
+
+    <main class="container">
+        <h2 class="section-title" id="titulo-productos">Catálogo Completo</h2>
+        <div class="products-grid" id="grid-productos"></div>
+    </main>
+
+    <div id="modalLogin" class="modal">
+        <div class="modal-content">
+            <span onclick="document.getElementById('modalLogin').style.display='none'" style="float:right;cursor:pointer;">&times;</span>
+            <h2>Acceso Admin</h2>
+            <input type="text" id="userAdmin" placeholder="Usuario (admin)">
+            <input type="password" id="passAdmin" placeholder="Contraseña (admin123)">
+            <button onclick="validarLogin()">Entrar</button>
+            <p id="loginError" style="color:red;display:none;">Error</p>
+        </div>
+    </div>
+
+    <div id="modalPanelAdmin" class="modal">
+        <div class="modal-content" style="width:600px;">
+            <div style="display:flex;justify-content:space-between;"><h2>Panel Inventario</h2> <button onclick="cerrarSesion()" style="background:red;color:white;">Salir</button></div>
+            <input type="text" id="stockSearch" placeholder="Producto a buscar..." style="width:70%;">
+            <button onclick="buscarStockAdmin()">Buscar</button>
+            <div id="stockResults" class="admin-search-result" style="margin-top:10px;"></div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
