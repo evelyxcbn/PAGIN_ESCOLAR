@@ -1,7 +1,7 @@
 <?php
 header('Content-Type: application/json');
 
-$conn = pg_connect("host=localhost dbname=tienda_coppel_escolar user=postgres password=TU_PASSWORD");
+$conn = pg_connect("host=localhost dbname=tienda_coppel_escolar user=postgres password=Hobimore188");
 
 $data = json_decode(file_get_contents("php://input"), true);
 $carrito = $data['carrito'];
