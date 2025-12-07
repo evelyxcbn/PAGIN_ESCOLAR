@@ -2,48 +2,102 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tienda UGM</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-
-<header>
-    <div class="container top-nav">
-        <div class="logo"><i class="fas fa-graduation-cap"></i> Tienda UGM</div>
-
-        <div class="search-box">
-            <input type="text" id="searchInput" placeholder="Buscar productos...">
-            <button onclick="buscarProductosGlobal()"><i class="fas fa-search"></i></button>
-        </div>
-
-        <div class="actions">
-            <div class="action-item" onclick="abrirLoginAdmin()"><i class="fas fa-user-shield"></i> Admin</div>
-            <div class="action-item" onclick="verCarrito()">
-                <i class="fas fa-shopping-cart"></i>
-                <span id="cart-count">Carrito (0)</span>
+    <header>
+        <div class="container top-nav">
+            <div class="logo"><i class="fas fa-graduation-cap"></i> Tienda UGM</div>
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Buscar productos...">
+                <button onclick="buscarProductosGlobal()"><i class="fas fa-search"></i></button>
+            </div>
+            <div class="actions">
+                <div class="action-item" onclick="abrirLoginAdmin()"><i class="fas fa-user-shield"></i> Admin</div>
+                <div class="action-item" onclick="verCarrito()"><i class="fas fa-shopping-cart"></i> <span id="cart-count">Carrito (0)</span></div>
             </div>
         </div>
+    </header>
+
+    <nav class="nav-links">
+        <ul class="container">
+            <li onclick="cargarProductos('Ofertas')">Ofertas</li>
+            <li onclick="cargarProductos('Computación')">Computación</li>
+            <li onclick="cargarProductos('Electrónica')">Electrónica</li>
+            <li onclick="cargarProductos('')">Ver Todo</li>
+        </ul>
+    </nav>
+
+    <main class="container">
+        <div class="carousel-container" style="position: relative; max-width: 1200px; margin: 20px auto; overflow: hidden; height: 300px; border-radius: 10px;">
+            <div class="carousel-slide" id="carouselSlide" style="display: flex; transition: transform 0.5s ease; height: 100%;">
+                <div class="carousel-item" style="min-width: 100%;"><img src="https://images.unsplash.com/photo-1550009158-9ebf69173e03?auto=format&fit=crop&w=1200&q=80" style="width:100%; height:100%; object-fit:cover;"></div>
+                <div class="carousel-item" style="min-width: 100%;"><img src="https://images.unsplash.com/photo-1496181133206-80ce9b88a853?auto=format&fit=crop&w=1200&q=80" style="width:100%; height:100%; object-fit:cover;"></div>
+            </div>
+        </div>
+
+        <h2 class="section-title" id="titulo-productos">Catálogo Completo</h2>
+        <div class="products-grid" id="grid-productos"></div>
+    </main>
+
+    <div id="modalLogin" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:2000; justify-content:center; align-items:center;">
+        <div class="modal-content" style="background:white; padding:30px; border-radius:10px; width:300px; text-align:center;">
+            <span onclick="document.getElementById('modalLogin').style.display='none'" style="float:right;cursor:pointer; font-size:20px;">&times;</span>
+            <h2>Acceso Admin</h2>
+            <input type="text" id="userAdmin" placeholder="Usuario (admin)" style="width:90%; margin:10px 0; padding:8px;">
+            <input type="password" id="passAdmin" placeholder="Contraseña (admin123)" style="width:90%; margin:10px 0; padding:8px;">
+            <button onclick="validarLogin()" style="margin-top:10px; padding:8px 20px; cursor:pointer;">Entrar</button>
+            <p id="loginError" style="color:red;display:none;">Error de credenciales</p>
+        </div>
     </div>
-</header>
 
-<main class="container">
-    <h2 id="titulo-productos">Catálogo</h2>
-    <div id="grid-productos"></div>
-</main>
-
-<!-- MODAL CARRITO -->
-<div id="modalCarrito" class="modal">
-    <div class="modal-content">
-        <span onclick="cerrarCarrito()" style="float:right;cursor:pointer;">&times;</span>
-        <h2>Carrito</h2>
-        <div id="listaCarrito"></div>
-        <h3>Total: $<span id="totalCarrito">0.00</span></h3>
-        <button onclick="vaciarCarrito()">Vaciar</button>
-        <button onclick="procesarCompra()">Procesar compra</button>
+    <div id="modalPanelAdmin" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:2000; justify-content:center; align-items:center;">
+        <div class="modal-content" style="background:white; padding:30px; border-radius:10px; width:600px;">
+            <div style="display:flex;justify-content:space-between;"><h2>Panel Inventario</h2> <button onclick="cerrarSesion()" style="background:red;color:white; border:none; padding:5px 10px; cursor:pointer;">Salir</button></div>
+            <input type="text" id="stockSearch" placeholder="Producto a buscar..." style="width:70%; padding:8px;">
+            <button onclick="buscarStockAdmin()" style="padding:8px;">Buscar</button>
+            <div id="stockResults" class="admin-search-result" style="margin-top:10px; max-height:300px; overflow-y:auto;"></div>
+        </div>
     </div>
-</div>
 
-<script src="script.js"></script>
+    <div id="modalCarrito" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background-color:rgba(0,0,0,0.8); z-index:9999; align-items:center; justify-content:center;">
+        
+        <div style="background:white; width:90%; max-width:600px; border-radius:10px; padding:20px; max-height:80vh; overflow-y:auto; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">
+            
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #ddd; padding-bottom:10px; margin-bottom:15px;">
+                <h2 style="margin:0; font-family:sans-serif;">Tu Carrito</h2>
+                <button onclick="cerrarModalCarrito()" style="background:none; border:none; font-size:24px; cursor:pointer; color:#555;">&times;</button>
+            </div>
+
+            <table style="width:100%; border-collapse:collapse; font-family:sans-serif;">
+                <thead>
+                    <tr style="background:#f5f5f5; text-align:left;">
+                        <th style="padding:10px;">Producto</th>
+                        <th style="padding:10px;">Precio</th>
+                        <th style="padding:10px;">Cant.</th>
+                        <th style="padding:10px;">Subtotal</th>
+                        <th style="padding:10px;"></th>
+                    </tr>
+                </thead>
+                <tbody id="lista-carrito">
+                    </tbody>
+            </table>
+
+            <div style="margin-top:20px; text-align:right; font-family:sans-serif;">
+                <h3 style="margin:10px 0;">Total: $<span id="total-carrito">0.00</span></h3>
+                
+                <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:15px;">
+                    <button onclick="vaciarCarrito()" style="background:#ef4444; color:white; border:none; padding:10px 15px; border-radius:5px; cursor:pointer;">Vaciar Todo</button>
+                    <button onclick="procesarCompra()" style="background:#10b981; color:white; border:none; padding:10px 20px; border-radius:5px; font-weight:bold; cursor:pointer;">Pagar Ahora</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="script.js"></script>
 </body>
 </html>

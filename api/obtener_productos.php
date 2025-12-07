@@ -1,44 +1,55 @@
 <?php
-require 'db.php';
-header('Content-Type: application/json');
+header("Content-Type: application/json");
+header("Access-Control-Allow-Origin: *");
 
-global $pdo;
-/** @var PDO $pdo */  // ← quita el rojo en VS Code
-
-$categoria = $_GET['categoria'] ?? '';
-$busqueda  = $_GET['busqueda'] ?? '';
-$ofertas   = $_GET['ofertas'] ?? '';
+// Configuración de Conexión a la CENTRAL (tienda_escolar)
+$host = "localhost";
+$db   = "tienda_escolar";
+$user = "postgres";
+$pass = "Hobimore188"; // Tu contraseña
 
 try {
-    $sql = "SELECT p.*, COALESCE(SUM(i.cantidad), 0) AS stock_total
-            FROM productos p
-            LEFT JOIN inventario i ON p.id_producto = i.id_producto
-            WHERE 1=1";
+    $pdo = new PDO("pgsql:host=$host;dbname=$db", $user, $pass);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
+    // Búsqueda o Filtros
+    $where = "";
     $params = [];
 
-    if (!empty($categoria)) {
-        $sql .= " AND p.categoria = ?";
-        $params[] = $categoria;
+    if (isset($_GET['categoria'])) {
+        $where = "WHERE p.categoria = :cat";
+        $params[':cat'] = $_GET['categoria'];
+    } elseif (isset($_GET['busqueda'])) {
+        $where = "WHERE p.nombre ILIKE :busq";
+        $params[':busq'] = "%" . $_GET['busqueda'] . "%";
+    } elseif (isset($_GET['ofertas'])) {
+        $where = "WHERE p.precio_oferta IS NOT NULL";
     }
 
-    if (!empty($busqueda)) {
-        $sql .= " AND p.nombre ILIKE ?";
-        $params[] = "%$busqueda%";
-    }
-
-    if (!empty($ofertas) && $ofertas === 'true') {
-        $sql .= " AND p.precio_oferta IS NOT NULL";
-    }
-
-    $sql .= " GROUP BY p.id_producto ORDER BY p.id_producto ASC";
+    // QUERY MAESTRO:
+    // Une productos (local) con inventario (distribuido)
+    // Suma la cantidad de todas las particiones (norte, sur, este, oeste)
+    $sql = "SELECT 
+                p.id_producto, 
+                p.nombre, 
+                p.precio, 
+                p.precio_oferta, 
+                p.imagen_url, 
+                p.categoria,
+                COALESCE(SUM(i.cantidad), 0) as stock_total
+            FROM productos p
+            LEFT JOIN inventario i ON p.id_producto = i.id_producto
+            $where
+            GROUP BY p.id_producto, p.nombre, p.precio, p.precio_oferta, p.imagen_url, p.categoria
+            ORDER BY p.id_producto ASC";
 
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
+    $productos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    echo json_encode($stmt->fetchAll());
+    echo json_encode($productos);
 
-} catch (Exception $e) {
-    echo json_encode(['error' => $e->getMessage()]);
+} catch (PDOException $e) {
+    echo json_encode(["error" => "Error de conexión: " . $e->getMessage()]);
 }
-
+?>
