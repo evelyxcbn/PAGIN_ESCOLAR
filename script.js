@@ -21,12 +21,13 @@ document.addEventListener('DOMContentLoaded', () => {
 // ==========================================
 function moverCarrusel(n) {
     const slides = document.querySelectorAll('.carousel-item');
+    if (slides.length === 0) return; // Validación extra
+
     slideIndex += n;
     
     if (slideIndex >= slides.length) slideIndex = 0;
     if (slideIndex < 0) slideIndex = slides.length - 1;
     
-    // Validación por si el elemento no existe aún en el DOM
     const track = document.getElementById('carouselSlide');
     if(track) track.style.transform = `translateX(-${slideIndex * 100}%)`;
 }
@@ -50,14 +51,14 @@ async function cargarProductos(filtro) {
     }
 
     const grid = document.getElementById('grid-productos');
+    if (!grid) return;
     grid.innerHTML = '<div class="loader">Cargando inventario distribuido...</div>';
 
     try {
         const res = await fetch(url);
         const productos = await res.json();
         
-        // Guardamos copia global para el carrito
-        productosGlobales = productos;
+        productosGlobales = productos; // Guardamos copia global
         grid.innerHTML = '';
 
         if(productos.length === 0) {
@@ -65,7 +66,6 @@ async function cargarProductos(filtro) {
             return;
         }
 
-        // Renderizar Tarjetas (Diseño Premium)
         productos.forEach(prod => {
             const pNormal = parseFloat(prod.precio);
             const pOferta = prod.precio_oferta ? parseFloat(prod.precio_oferta) : null;
@@ -109,7 +109,6 @@ function buscarProductosGlobal() {
     const term = document.getElementById('searchInput').value;
     if(term) {
         document.getElementById('titulo-productos').innerText = `Resultados para: "${term}"`;
-        // Reutilizamos la lógica llamando a la API con el parámetro busqueda
         fetch(`api/obtener_productos.php?busqueda=${term}`)
             .then(res => res.json())
             .then(productos => {
@@ -140,10 +139,9 @@ function buscarProductosGlobal() {
 }
 
 // ==========================================
-// 3. CARRITO DE COMPRAS (Funcionalidad Completa)
+// 3. CARRITO DE COMPRAS
 // ==========================================
 
-// Agregar item al array cart
 function agregarAlCarrito(id) {
     const prod = productosGlobales.find(p => p.id_producto == id);
     const existe = cart.find(item => item.id == id);
@@ -157,7 +155,7 @@ function agregarAlCarrito(id) {
             name: prod.nombre,
             price: parseFloat(precioReal),
             quantity: 1,
-            img: prod.imagen_url // Guardamos la imagen para mostrarla en el carrito
+            img: prod.imagen_url 
         });
     }
     actualizarCarritoUI();
@@ -172,13 +170,12 @@ function agregarAlCarrito(id) {
     }
 }
 
-// Actualizar contador del header
 function actualizarCarritoUI() {
     const count = cart.reduce((a,b)=>a+b.quantity,0);
-    document.getElementById('cart-count').innerText = `Carrito (${count})`;
+    const badge = document.getElementById('cart-count');
+    if(badge) badge.innerText = `Carrito (${count})`;
 }
 
-// Abrir Modal y Renderizar
 function verCarrito() {
     const modal = document.getElementById('modalCarrito');
     if(modal) {
@@ -189,14 +186,12 @@ function verCarrito() {
     }
 }
 
-// Cerrar Modal
 function cerrarModalCarrito() {
     document.getElementById('modalCarrito').style.display = 'none';
 }
 
-// Generar HTML de la tabla del carrito
 function renderizarListaCarrito() {
-    const container = document.getElementById('lista-carrito'); // <tbody> en el HTML
+    const container = document.getElementById('lista-carrito'); 
     const totalSpan = document.getElementById('total-carrito');
     
     if(!container || !totalSpan) return;
@@ -240,7 +235,6 @@ function renderizarListaCarrito() {
     totalSpan.innerText = total.toFixed(2);
 }
 
-// Modificar cantidad (+ o -)
 function cambiarCantidad(id, delta) {
     const item = cart.find(i => i.id === id);
     if (item) {
@@ -254,14 +248,12 @@ function cambiarCantidad(id, delta) {
     }
 }
 
-// Eliminar un producto específico
 function eliminarDelCarrito(id) {
     cart = cart.filter(i => i.id !== id);
     actualizarCarritoUI();
     renderizarListaCarrito();
 }
 
-// Vaciar todo el carrito
 function vaciarCarrito() {
     if(confirm('¿Estás seguro de vaciar el carrito?')) {
         cart = [];
@@ -271,7 +263,7 @@ function vaciarCarrito() {
 }
 
 // ==========================================
-// FUNCIÓN DE PAGO REAL (CONECTADA A BD)
+// FUNCIÓN DE PAGO Y TICKET (CORREGIDA SIN ERROR NULL)
 // ==========================================
 async function procesarCompra() {
     if(cart.length === 0) {
@@ -279,47 +271,103 @@ async function procesarCompra() {
         return;
     }
 
-    // Feedback visual en el botón
     const btn = event.target; 
-    const textoOriginal = btn ? btn.innerText : 'Pagar';
-    if(btn) {
-        btn.innerText = "Procesando...";
-        btn.disabled = true;
-    }
+    const textoOriginal = btn ? btn.innerText : 'Pagar Ahora';
+    if(btn) { btn.innerText = "Procesando..."; btn.disabled = true; }
+
+    // Elegir sucursal aleatoria
+    const sucursales = ['norte', 'sur', 'este', 'oeste'];
+    const sucursalAleatoria = sucursales[Math.floor(Math.random() * sucursales.length)];
 
     try {
-        // Enviamos el carrito al Backend
         const res = await fetch('api/guardar_pedido.php', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ carrito: cart })
+            body: JSON.stringify({ 
+                carrito: cart,
+                sucursal: sucursalAleatoria 
+            })
         });
 
-        const data = await res.json();
+        // Intentar leer la respuesta
+        let data;
+        try {
+            data = await res.json();
+        } catch (jsonError) {
+            console.error("Error al leer JSON:", jsonError);
+            throw new Error("El servidor no devolvió una respuesta válida. Revisa la consola.");
+        }
 
         if(data.success) {
-            alert("¡Compra Exitosa! " + data.msg);
+            // CORRECCIÓN IMPORTANTE: 
+            // Buscamos el div directo dentro de modalCarrito, sin depender de la clase .modal-content
+            const modalContent = document.querySelector('#modalCarrito > div');
+
+            if (!modalContent) {
+                alert("Compra exitosa, pero no se pudo mostrar el ticket. Recarga la página.");
+                return;
+            }
+
+            // Ocultamos el pie del carrito si existe
+            const footerDiv = modalContent.querySelector('div[style*="text-align:right"]');
+            if(footerDiv) footerDiv.style.display = 'none';
+
+            // Datos para el Ticket
+            const fecha = data.fecha || new Date().toLocaleDateString();
+            const folio = data.folio || 'PEND';
+            const nodo = (data.sucursal || sucursalAleatoria).toUpperCase();
+            const total = cart.reduce((a,b)=>a+(b.price*b.quantity),0).toFixed(2);
             
-            // Limpieza
+            let itemsHTML = '';
+            cart.forEach(item => {
+                itemsHTML += `
+                    <tr style="border-bottom:1px dashed #ccc;">
+                        <td style="padding:5px; font-size:12px;">${item.name} <br> <small>x${item.quantity}</small></td>
+                        <td style="text-align:right; font-size:12px;">$${(item.price * item.quantity).toFixed(2)}</td>
+                    </tr>
+                `;
+            });
+
+            // Reemplazar contenido con el Ticket
+            modalContent.innerHTML = `
+                <div id="ticket-visual" style="text-align:center; font-family:'Courier New', monospace; padding:10px; border:1px solid #ddd; background:#fffcf5;">
+                    <h2 style="margin:0; font-size:1.5rem;">TIENDA UGM</h2>
+                    <p style="margin:5px 0; font-size:0.9rem;">Campus Minatitlán</p>
+                    <p>---------------------------</p>
+                    <p><strong>FOLIO: #${folio}</strong></p>
+                    <p>FECHA: ${fecha}</p>
+                    <p>NODO: ${nodo}</p>
+                    <p>---------------------------</p>
+                    <table style="width:100%; text-align:left;">
+                        ${itemsHTML}
+                    </table>
+                    <p>---------------------------</p>
+                    <h3 style="text-align:right; margin:10px 0;">TOTAL: $${total}</h3>
+                    <p>---------------------------</p>
+                    <p style="font-size:0.8rem;">¡Gracias por su compra!</p>
+                    <br>
+                    <button onclick="window.print()" style="background:#333; color:white; padding:10px 20px; border:none; border-radius:5px; cursor:pointer; font-weight:bold; font-size:1rem;">
+                        <i class="fas fa-print"></i> IMPRIMIR TICKET
+                    </button>
+                    <br><br>
+                    <button onclick="location.reload()" style="background:none; border:1px solid #333; padding:5px 10px; cursor:pointer; border-radius:5px;">
+                        Cerrar y Seguir Comprando
+                    </button>
+                </div>
+            `;
+
             cart = []; 
-            actualizarCarritoUI(); 
-            cerrarModalCarrito(); 
-            
-            // Importante: Recargar productos para ver que bajó el stock
-            cargarProductos(''); 
+            actualizarCarritoUI();
+
         } else {
-            alert("Error al procesar: " + data.msg);
+            alert("Error del servidor: " + data.msg);
+            if(btn) { btn.innerText = textoOriginal; btn.disabled = false; }
         }
 
     } catch (e) {
         console.error(e);
-        alert("Error de conexión con el servidor.");
-    } finally {
-        // Restaurar botón
-        if(btn) {
-            btn.innerText = textoOriginal;
-            btn.disabled = false;
-        }
+        alert("Ocurrió un error: " + e.message);
+        if(btn) { btn.innerText = textoOriginal; btn.disabled = false; }
     }
 }
 
@@ -352,12 +400,10 @@ function validarLogin() {
 
 function cerrarSesion() {
     document.getElementById('modalPanelAdmin').style.display = 'none';
-    // Limpiar resultados anteriores
     document.getElementById('stockResults').innerHTML = '<p style="color:#777; font-style:italic;">Busque un producto...</p>';
     document.getElementById('stockSearch').value = '';
 }
 
-// BÚSQUEDA DE STOCK EN NODOS (Norte, Sur, Este, Oeste)
 async function buscarStockAdmin() {
     const term = document.getElementById('stockSearch').value;
     const resultsDiv = document.getElementById('stockResults');
@@ -383,15 +429,14 @@ async function buscarStockAdmin() {
         }
 
         data.forEach(item => {
-            // Asignar color según sucursal
             let color = '#333';
             let badgeColor = '#eee';
             
             switch(item.sucursal_id) {
-                case 'norte': color = '#d32f2f'; badgeColor='#ffebee'; break; // Rojo
-                case 'sur': color = '#1976d2'; badgeColor='#e3f2fd'; break; // Azul
-                case 'este': color = '#388e3c'; badgeColor='#e8f5e9'; break; // Verde
-                case 'oeste': color = '#fbc02d'; badgeColor='#fffde7'; break; // Amarillo
+                case 'norte': color = '#d32f2f'; badgeColor='#ffebee'; break; 
+                case 'sur': color = '#1976d2'; badgeColor='#e3f2fd'; break; 
+                case 'este': color = '#388e3c'; badgeColor='#e8f5e9'; break; 
+                case 'oeste': color = '#fbc02d'; badgeColor='#fffde7'; break; 
             }
             
             resultsDiv.innerHTML += `
@@ -412,7 +457,47 @@ async function buscarStockAdmin() {
     }
 }
 
-// Guardar Nuevo Producto (Desde el modal Admin)
+async function verReporteVentas() {
+    const divResultados = document.getElementById('stockResults');
+    divResultados.innerHTML = '<div class="loader">Cargando reporte global...</div>';
+
+    try {
+        const res = await fetch('api/ver_ventas.php');
+        const ventas = await res.json();
+
+        divResultados.innerHTML = '<h3>Últimas Ventas (Global)</h3>';
+
+        if(ventas.length === 0) {
+            divResultados.innerHTML += '<p>No hay ventas registradas.</p>';
+            return;
+        }
+
+        ventas.forEach(v => {
+            let color = '#333';
+            if(v.sucursal_id === 'norte') color = '#d32f2f'; 
+            if(v.sucursal_id === 'sur') color = '#1976d2';
+            if(v.sucursal_id === 'este') color = '#388e3c';
+            if(v.sucursal_id === 'oeste') color = '#fbc02d';
+
+            divResultados.innerHTML += `
+                <div style="border-left: 4px solid ${color}; background:#f9f9f9; padding:10px; margin-bottom:8px; font-size:0.9rem;">
+                    <div style="display:flex; justify-content:space-between;">
+                        <strong>Pedido #${v.id_venta}</strong>
+                        <span style="color:${color}; font-weight:bold;">${v.sucursal_id.toUpperCase()}</span>
+                    </div>
+                    <div>Cliente: ${v.cliente_nombre}</div>
+                    <div style="font-style:italic; color:#555;">"${v.detalles}"</div>
+                    <div style="text-align:right; font-weight:bold; margin-top:5px;">Total: $${v.total}</div>
+                </div>
+            `;
+        });
+
+    } catch (e) {
+        console.warn("Función de reporte de ventas requiere api/ver_ventas.php");
+        divResultados.innerHTML = 'Error o función no disponible.';
+    }
+}
+
 const formNuevo = document.getElementById('formNuevoProducto');
 if(formNuevo) {
     formNuevo.addEventListener('submit', async (e) => {

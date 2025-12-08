@@ -1,7 +1,7 @@
 <?php
 header("Content-Type: application/json");
 
-// Conexión
+// Conexión a la Base de Datos Central
 $host = "localhost";
 $db   = "tienda_escolar";
 $user = "postgres";
@@ -21,38 +21,55 @@ try {
     }
 
     $carrito = $data['carrito'];
+    // Recibir la sucursal del JS (o usar 'norte' si falla)
+    $sucursalDestino = isset($data['sucursal']) ? $data['sucursal'] : 'norte';
+    
     $totalVenta = 0;
     $detallesTexto = "";
 
-    // 1. Calcular total y preparar string de detalles
+    // 1. Calcular total y actualizar stock
     foreach ($carrito as $item) {
         $subtotal = $item['price'] * $item['quantity'];
         $totalVenta += $subtotal;
         $detallesTexto .= "{$item['name']} (x{$item['quantity']}), ";
         
-        // OPCIONAL: Aquí deberíamos restar stock. 
-        // Como es distribuido, restaremos del nodo 'norte' para este ejemplo rápido.
-        // Ojo: Esto actualizará la tabla remota 'inventario_local' en servidor_norte
+        // --- RESTA DE STOCK DINÁMICA ---
         $updateStock = "UPDATE inventario SET cantidad = cantidad - :cant 
-                        WHERE id_producto = :id AND sucursal_id = 'norte'";
+                        WHERE id_producto = :id AND sucursal_id = :sucursal";
+        
         $stmtStock = $pdo->prepare($updateStock);
-        $stmtStock->execute([':cant' => $item['quantity'], ':id' => $item['id']]);
+        $stmtStock->execute([
+            ':cant' => $item['quantity'], 
+            ':id' => $item['id'],
+            ':sucursal' => $sucursalDestino // Sucursal dinámica
+        ]);
     }
 
-    // 2. Insertar en la tabla DISTRIBUIDA 'ventas'
-    // Al especificar sucursal_id = 'norte', Postgres enviará esto a 'venta_norte' (servidor remoto)
+    // 2. Insertar en la tabla DISTRIBUIDA 'ventas' Y OBTENER FOLIO
+    // "RETURNING id_venta" obliga a Postgres a devolver el ID generado
     $sqlVenta = "INSERT INTO ventas (sucursal_id, cliente_nombre, total, detalles, estatus) 
-                 VALUES (:sucursal, :cliente, :total, :detalles, 'PAGADO')";
+                 VALUES (:sucursal, :cliente, :total, :detalles, 'PAGADO')
+                 RETURNING id_venta";
     
     $stmt = $pdo->prepare($sqlVenta);
     $stmt->execute([
-        ':sucursal' => 'norte', // Nodo predeterminado
+        ':sucursal' => $sucursalDestino,
         ':cliente'  => 'Cliente Web',
         ':total'    => $totalVenta,
         ':detalles' => rtrim($detallesTexto, ", ")
     ]);
 
-    echo json_encode(["success" => true, "msg" => "Compra registrada en Nodo Norte"]);
+    // Capturar el ID (Folio) que devolvió la base de datos
+    $folio = $stmt->fetchColumn();
+
+    // 3. Devolver respuesta completa al JavaScript
+    echo json_encode([
+        "success" => true, 
+        "msg" => "Compra registrada correctamente",
+        "folio" => $folio,            // <--- IMPORTANTE PARA EL TICKET
+        "sucursal" => $sucursalDestino,
+        "fecha" => date("Y-m-d H:i:s")
+    ]);
 
 } catch (PDOException $e) {
     echo json_encode(["success" => false, "msg" => "Error BD: " . $e->getMessage()]);

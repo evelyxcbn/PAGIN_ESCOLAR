@@ -57,16 +57,15 @@
     <div id="modalPanelAdmin" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:2000; justify-content:center; align-items:center;">
         <div class="modal-content" style="background:white; padding:30px; border-radius:10px; width:600px;">
             <div style="display:flex;justify-content:space-between;"><h2>Panel Inventario</h2> <button onclick="cerrarSesion()" style="background:red;color:white; border:none; padding:5px 10px; cursor:pointer;">Salir</button></div>
-            <input type="text" id="stockSearch" placeholder="Producto a buscar..." style="width:70%; padding:8px;">
-            <button onclick="buscarStockAdmin()" style="padding:8px;">Buscar</button>
+            <input type="text" id="stockSearch" placeholder="Producto a buscar..." style="width:60%; padding:8px;">
+            <button onclick="buscarStockAdmin()" style="padding:8px;">Buscar Stock</button>
+            <button onclick="verReporteVentas()" style="padding:8px; background:#673ab7; color:white; border:none; cursor:pointer;">Ver Ventas</button>
             <div id="stockResults" class="admin-search-result" style="margin-top:10px; max-height:300px; overflow-y:auto;"></div>
         </div>
     </div>
 
     <div id="modalCarrito" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background-color:rgba(0,0,0,0.8); z-index:9999; align-items:center; justify-content:center;">
-        
         <div style="background:white; width:90%; max-width:600px; border-radius:10px; padding:20px; max-height:80vh; overflow-y:auto; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">
-            
             <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #ddd; padding-bottom:10px; margin-bottom:15px;">
                 <h2 style="margin:0; font-family:sans-serif;">Tu Carrito</h2>
                 <button onclick="cerrarModalCarrito()" style="background:none; border:none; font-size:24px; cursor:pointer; color:#555;">&times;</button>
@@ -82,21 +81,84 @@
                         <th style="padding:10px;"></th>
                     </tr>
                 </thead>
-                <tbody id="lista-carrito">
-                    </tbody>
+                <tbody id="lista-carrito"></tbody>
             </table>
 
             <div style="margin-top:20px; text-align:right; font-family:sans-serif;">
                 <h3 style="margin:10px 0;">Total: $<span id="total-carrito">0.00</span></h3>
-                
                 <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:15px;">
                     <button onclick="vaciarCarrito()" style="background:#ef4444; color:white; border:none; padding:10px 15px; border-radius:5px; cursor:pointer;">Vaciar Todo</button>
                     <button onclick="procesarCompra()" style="background:#10b981; color:white; border:none; padding:10px 20px; border-radius:5px; font-weight:bold; cursor:pointer;">Pagar Ahora</button>
                 </div>
             </div>
-
         </div>
     </div>
+
+    <div id="area-ticket" style="display:none;">
+        <div class="ticket">
+            <div class="logo-ticket">
+                <i class="fas fa-graduation-cap"></i> TIENDA UGM
+            </div>
+            <p class="center">Universidad del Golfo de México<br>Campus Minatitlán</p>
+            <p class="center">--------------------------------</p>
+            <p><strong>Folio:</strong> <span id="ticket-folio">000</span></p>
+            <p><strong>Fecha:</strong> <span id="ticket-fecha">--/--/--</span></p>
+            <p><strong>Sucursal:</strong> <span id="ticket-sucursal">--</span></p>
+            <p class="center">--------------------------------</p>
+            
+            <table style="width:100%; font-size:12px; border-collapse: collapse;">
+                <thead>
+                    <tr style="text-align:left; border-bottom: 1px dashed black;">
+                        <th>Prod</th>
+                        <th style="text-align:center;">Cant</th>
+                        <th style="text-align:right;">$$</th>
+                    </tr>
+                </thead>
+                <tbody id="ticket-items">
+                    </tbody>
+            </table>
+
+            <p class="center">--------------------------------</p>
+            <p class="total">TOTAL: $<span id="ticket-total">0.00</span></p>
+            <p class="center">--------------------------------</p>
+            <p class="center" style="margin-top:20px;">¡Gracias por su compra!</p>
+            <p class="center" style="font-size:10px;">Este ticket es un comprobante<br>de simulación académica.</p>
+        </div>
+    </div>
+
+    <style>
+        /* ESTILOS EXCLUSIVOS PARA IMPRESIÓN */
+        @media print {
+            body * { visibility: hidden; } /* Ocultar toda la página web */
+            #area-ticket, #area-ticket * { visibility: visible; display: block !important; } /* Mostrar solo el ticket */
+            
+            #area-ticket {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                background: white;
+            }
+            
+            /* Simulación de Ticket Térmico */
+            .ticket {
+                width: 300px; /* Ancho estándar de impresora térmica (80mm aprox) */
+                margin: 0 auto; /* Centrado en la hoja */
+                font-family: 'Courier New', Courier, monospace; /* Fuente monoespaciada */
+                font-size: 14px;
+                padding: 10px;
+                color: black;
+            }
+            
+            .center { text-align: center; margin: 5px 0; }
+            .logo-ticket { font-size: 20px; font-weight: bold; text-align: center; margin-bottom: 10px; }
+            .total { font-size: 18px; font-weight: bold; text-align: right; margin: 10px 0; }
+            
+            /* Ajustes para tabla en impresión */
+            table { width: 100%; }
+            th, td { padding: 4px 0; }
+        }
+    </style>
 
     <script src="script.js"></script>
 </body>
